@@ -2,25 +2,15 @@ using JSON
 using ImageIO
 using Images
 
+include("utils.jl")
+
 function read_json(dir)
     json_list = []
     json_files = readdir(dir)
     for f in json_files
         f = joinpath(dir, f)
-
-        fio = open(f)
-        str = read(fio, String)
-        close(fio)
-
-        println(str)
-        str = replace(str, '\'' => '"')
-        str = replace(str, "False}" => "false}")
-        str = replace(str, "True}" => "true}")
-        println(str)
-
-        fio = open(f, "w")
-        write(fio, str)
-        close(fio)
+        
+        #fix_json(f)
 
         j_dict = JSON.parsefile(f)
         push!(json_list, j_dict)
@@ -33,6 +23,7 @@ function read_rgb(dir)
     rgb_files = readdir(dir)
     for f in rgb_files
         img = load(joinpath(dir, f))
+        img = channelview(img)
         push!(rgb_list, img)
     end
     return rgb_list
