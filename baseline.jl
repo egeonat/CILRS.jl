@@ -1,4 +1,4 @@
-using Knet, Statistics
+using Knet, Statistics, Random
 
 
 function init_model()
@@ -6,7 +6,9 @@ function init_model()
         randn(Float32, (3, 3, 3, 8)) .* 0.1,
         randn(Float32, (3, 3, 8, 16)) .* 0.1,
         randn(Float32, (20, 64 * 36 * 16)) .* 0.1,
+        randn(Float32, (20)) .* 0.1,
         randn(Float32, (2, 20)) .* 0.1
+        randn(Float32, (2)) .* 0.1,
         ]
     w = map(Knet.array_type[], w)    
 
@@ -24,5 +26,8 @@ function predict(w, x)
     x = lin_layer(w[3:4], mat(x))
     x = lin_layer(w[5:6], x)
 
-
 function loss(w, x, actions)
+    act_preds = predict(w, x)
+    return sum(abs.(act_preds - actions))
+
+lossgrad = grad(loss)
