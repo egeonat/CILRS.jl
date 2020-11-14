@@ -13,7 +13,7 @@ class cil_agent(AutonomousAgent):
         self.track = Track.SENSORS
 
         self.jl = julia.Main
-        self.jl.include("carla_agent.jl")
+        self.jl.include("/home/onat/carla/cilrs-julia/carla_agent.jl")
 
 
     def sensors(self):
@@ -25,8 +25,8 @@ class cil_agent(AutonomousAgent):
                     "roll": 0.0,
                     "pitch": 0.0,
                     "yaw": 0.0,
-                    "width": 128,
-                    "height": 96,
+                    "width": 256,
+                    "height": 144,
                     "fov": 100,
                     "id": "rgb_center"},
                    {
@@ -38,13 +38,16 @@ class cil_agent(AutonomousAgent):
 
 
     def run_step(self, input_data, timestamp):
-        img = input_data["rbg_center"][1]
+        img = input_data["rgb_center"][1]
         speed = input_data["speed"][1]["speed"]
+        command = self._global_plan[0][1]
 
-        self.jl.run_step(img, speed)
-
+        throttle, steer = self.jl.run_step(img, speed, command)
+        print("Throttle: {}".format(throttle))
+        print("Steer: {}".format(steer))
         control = carla.VehicleControl()
-        control.throttle = 1.0
+        control.throttle = throttle
+        control.steer = steer
         return control
 
 if __name__ == "__main__":
@@ -52,5 +55,5 @@ if __name__ == "__main__":
     julia_interface.include("carla_agent.jl")
     img = [[[0, 0, 0]]]
     speed = 10
-    result = julia_interface.run_step(img, speed)
+    result = julia_interface.run_step(img, speed, 1)
     print(result)
