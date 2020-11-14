@@ -1,6 +1,4 @@
-function run_step(img, speed)
-	println(size(img))
-	println(typeof(img))
-	println(speed)
+function run_step(img, speed, command)
+	
 end
 
