@@ -1,4 +1,7 @@
 using Knet
+using PyCall
+@pyimport torch
+@pyimport numpy
 
 function kaiming_normal(a...; mode="fan_out", gain=sqrt(2))
     w = randn(a...)
@@ -104,7 +107,7 @@ function (bb::BasicBlock)(x)
     relu.(out + residual)
 end
 
-function make_layer(in_ch::Int, out_ch::Int, blocks::Int; stride::Int=1)
+function _make_layer(in_ch::Int, out_ch::Int, blocks::Int; stride::Int=1)
     downsample = identity
     if stride != 1 || in_ch != out_ch
         downsample = SequentialModule([
@@ -120,23 +123,62 @@ function make_layer(in_ch::Int, out_ch::Int, blocks::Int; stride::Int=1)
     SequentialModule(layers)
 end
 
-struct ResNet
-    sequential_module
-end
-function ResNet(layers::Array{Int, 1}=[3, 4, 6, 3], out_size::Int=512)
-    sequential_module = SequentialModule([
+# ResNet implementation support ResNet18 and Resnet34 only
+function ResNet(layers::Array{Int, 1}, out_size::Int)
+    SequentialModule([
         ConvLayer(7, 3, 64, stride=2, pad=3, bias=false),
         BNormLayer2d(64),
         x -> relu.(x),
         PoolLayer(3, stride=2, pad=1),
-        make_layer(64, 64, layers[1]),
-        make_layer(64, 128, layers[2], stride=2),
-        make_layer(128, 256, layers[3], stride=2),
-        make_layer(256, 512, layers[4], stride=2),
+        _make_layer(64, 64, layers[1]),
+        _make_layer(64, 128, layers[2], stride=2),
+        _make_layer(128, 256, layers[3], stride=2),
+        _make_layer(256, 512, layers[4], stride=2),
         x -> global_avg_pool2d(x),
         x -> mat(x),
         DenseLayer(512, out_size)
     ])
-    ResNet(sequential_module)
 end
-(r::ResNet)(x) = r.sequential_module(x)
+
+function _load_conv_weights!(conv_layer::ConvLayer, py_conv_layer)
+    conv_layer.w[:] = param(permutedims(py_conv_layer.weight.data.numpy(), [3, 4, 2, 1]))[:]
+    if !isnothing(py_conv_layer.bias)
+        conv_layer.b[:] = param(test_conv2d.bias.data.numpy())
+    end
+    conv_layer
+end
+
+function _load_basic_block_weights!(basic_block::BasicBlock, py_basic_block)
+    bb_layers = basic_block.sequential_module.layers
+    _load_conv_weights!(bb_layers[1], py_basic_block.conv1)
+    _load_conv_weights!(bb_layers[4], py_basic_block.conv2)
+    if typeof(basic_block.downsample) <: SequentialModule
+        _load_conv_weights!(basic_block.downsample.layers[1], py_basic_block.downsample["0"])
+    end
+    basic_block
+end
+
+function _load_layer_weights!(res_layer::SequentialModule, py_res_layer)
+    for (i, bb) in enumerate(res_layer.layers)
+        i -= 1
+        _load_basic_block_weights!(bb, py_res_layer["$i"])
+    end
+end
+
+# Loads weights of all layers except for fully connected layers
+function _load_ResNet_weights!(resnet::SequentialModule, torch_model)
+    _load_conv_weights!(resnet.layers[1], torch_model.conv1)
+    _load_layer_weights!(resnet.layers[5], torch_model.layer1)
+    _load_layer_weights!(resnet.layers[6], torch_model.layer2)
+    _load_layer_weights!(resnet.layers[7], torch_model.layer3)
+    _load_layer_weights!(resnet.layers[8], torch_model.layer4)
+end
+
+function ResNet34(pretrained::Bool=true, pretrained_path::String="resnet/resnet_34_model")
+    model = ResNet([3, 4, 6, 3], 512)
+    if pretrained
+        pretrained_model = torch.load(pretrained_path)
+        _load_ResNet_weights!(model, pretrained_model)
+    end
+    model
+end
