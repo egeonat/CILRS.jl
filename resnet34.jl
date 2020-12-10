@@ -29,19 +29,19 @@ SequentialModule(layers...) = SequentialModule(layers)
 (n::SequentialModule)(x) = (for l in n.layers;x = l(x); end; x;)
 
 struct DenseLayer
-    W
+    w
     b
     fn
 end
 function DenseLayer(in_size::Int, out_size::Int; fn::Function=identity)
-    W = param(out_size, in_size, init=kaiming_normal)
+    w = param(out_size, in_size, init=kaiming_normal)
     b = param(out_size, 1, init=zeros)
-    DenseLayer(W, b, fn)
+    DenseLayer(w, b, fn)
 end
-(l::DenseLayer)(x) = l.fn.(l.W*x .+ l.b)
+(l::DenseLayer)(x) = l.fn.(l.w*x .+ l.b)
     
 struct ConvLayer
-    W
+    w
     b
     pad
     stride
@@ -49,15 +49,15 @@ struct ConvLayer
 end
 function ConvLayer(size::Int, in_ch::Int, out_ch::Int; pad::Int, stride::Int,
     fn::Function=identity, bias::Bool=true)
-    W = param(size, size, in_ch, out_ch, init=kaiming_normal)
+    w = param(size, size, in_ch, out_ch, init=kaiming_normal)
     b = nothing
     if bias
         b = param(1, 1, out_ch, init=zeros)
     end
-    ConvLayer(W, b, pad, stride, fn)
+    ConvLayer(w, b, pad, stride, fn)
 end
 function (c::ConvLayer)(x) 
-    out = conv4(c.W, x, padding=c.pad, stride=c.stride)
+    out = conv4(c.w, x, padding=c.pad, stride=c.stride)
     if !isnothing(c.b)
         out = out .+ c.b
     end
@@ -123,7 +123,7 @@ end
 struct ResNet
     sequential_module
 end
-function ResNet(layers::Array{Int, 1}, out_size::Int)
+function ResNet(layers::Array{Int, 1}=[3, 4, 6, 3], out_size::Int=512)
     sequential_module = SequentialModule([
         ConvLayer(7, 3, 64, stride=2, pad=3, bias=false),
         BNormLayer2d(64),
