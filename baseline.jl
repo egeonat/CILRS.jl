@@ -1,6 +1,5 @@
 using Knet, Statistics, Random
 
-
 function init_model()
     w = Any[
         randn(Float32, (3, 3, 3, 8)) .* 0.1,

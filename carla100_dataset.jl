@@ -35,18 +35,6 @@ function length(d::Carla100Data)
     return length(d.command)
 end
 
-""" 
-    read_dataset(root_dir, batch_size=1)
-
-Read dataset returns an iterator of minibatches. Each minibatch is a tuple of
-(input_array, output_array). 
-
-An input_array is an array of size=batch_size containing tuples of input data. 
-An output_array is an array of size=batch_size containing tuples of output data.    
-
-Input tuples are of the form (rgb_img, speed, command) 
-Action tuples are of the form (throttle, steer)
-"""
 function read_dataset(root_dir; batch_size=1)
     section_dirs = [s for s in readdir(root_dir, join=true) if occursin("CVPR2019-CARLA100_", s)]
     read_sections(section_dirs, batch_size=batch_size)
