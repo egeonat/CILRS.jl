@@ -49,7 +49,6 @@ An output_array is an array of size=batch_size containing tuples of output data.
 Input tuples are of the form (rgb_img, speed, command) 
 Action tuples are of the form (throttle, steer)
 """
-(input, action)
 function read_dataset(root_dir, batch_size=1)
     dataset = Dict()
     routes = readdir(root_dir)

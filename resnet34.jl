@@ -84,7 +84,7 @@ struct BNormLayer2d
     bmoments
     bparams
 end
-BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), bnparams(channels))
+BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), Knet.atype(bnparams(channels)))
 (bn::BNormLayer2d)(x) = batchnorm(x, bn.bmoments, bn.bparams)
 
 struct BasicBlock
