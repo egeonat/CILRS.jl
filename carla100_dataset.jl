@@ -5,6 +5,10 @@ using ImageIO
 using Images
 using Knet
 
+# TODO recompute these with larger sample
+RGB_MEAN = [0.28462812, 0.3055363, 0.32060984]
+RGB_STD_DEV = [0.2486219, 0.24289215, 0.23690315]
+
 struct Carla100Data
     rgb::Array{Float32, 4}
     speed::Array{Float32}
@@ -65,6 +69,12 @@ function read_sections(section_dirs; batchsize=1, shuffle=true)
         throttle = cat(throttle, ep_throttle..., dims=1)
         steer = cat(steer, ep_steer..., dims=1)
     end
+    println("Loaded ", length(speed), " samples")
+    #println(summary(rgb))
+    #println(summary(speed))
+    #println(summary(command))
+    #println(summary(throttle))
+    #println(summary(steer))
     Carla100Data(rgb, speed, command, throttle, steer, batchsize, shuffle)
 end
 
@@ -82,10 +92,15 @@ function read_episode(episode)
     @assert length(rgb_files) == length(json_files) "Rgb and json file count mismatch"
     for i in 0:length(rgb_files)-1
         id_str = string(lpad(i, 5, "0"))
+        # Load json measurements
         j_dict = JSON.parsefile(joinpath(episode, string("measurements_", id_str, ".json")))
+        # Load and reshape rgb
         rgb = float32.(load(joinpath(episode, string("CentralRGB_", id_str, ".png"))))
         rgb = PermutedDimsArray(channelview(rgb), (2, 3, 1))
-        rgb = reshape(rgb, size(rgb)..., 1)
+        # Normalize
+        rgb = (reshape(rgb, size(rgb)..., 1) .- reshape(RGB_MEAN, (1, 1, 3, 1))) 
+        rgb = rgb ./ reshape(RGB_STD_DEV, (1, 1, 3, 1))
+        # Extract relevant measurements
         speed = j_dict["playerMeasurements"]["forwardSpeed"]
         command = j_dict["directions"]
         throttle = nothing
