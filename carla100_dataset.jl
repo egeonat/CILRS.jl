@@ -21,13 +21,12 @@ function iterate(d::Carla100Data, state=ifelse(d.shuffle, randperm(length(d)), c
     if remaining_count < d.batchsize
         return nothing
     end
-    sample = (KnetArray{Float32, 4}(d.rgb[:,:,:,state[1:d.batchsize]]),
+    sample = ((KnetArray{Float32, 4}(d.rgb[:,:,:,state[1:d.batchsize]]),
         KnetArray{Float32}(d.speed[state[1:d.batchsize]]),
-        KnetArray{Int8}(d.command[state[1:d.batchsize]]),
-        KnetArray{Float32}(d.throttle[state[1:d.batchsize]]),
-        KnetArray{Float32}(d.steer[state[1:d.batchsize]]))
+        KnetArray{Int8}(d.command[state[1:d.batchsize]])),
+        (KnetArray{Float32}(d.throttle[state[1:d.batchsize]]),
+        KnetArray{Float32}(d.steer[state[1:d.batchsize]])))
     state = state[d.batchsize+1:end]
-    println(length(state))
     return (sample, state)
 end
 
@@ -35,12 +34,12 @@ function length(d::Carla100Data)
     return length(d.command)
 end
 
-function read_dataset(root_dir; batch_size=1)
+function read_dataset(root_dir; batchsize=1)
     section_dirs = [s for s in readdir(root_dir, join=true) if occursin("CVPR2019-CARLA100_", s)]
-    read_sections(section_dirs, batch_size=batch_size)
+    read_sections(section_dirs, batchsize=batchsize)
 end
 
-function read_sections(section_dirs; batch_size=1, shuffle=true)
+function read_sections(section_dirs; batchsize=1, shuffle=true)
     rgb = Array{Float32, 4}(undef, 88, 200, 3,0)
     speed = Array{Float32}(undef, 0)
     command = Array{Int8}(undef, 0)
@@ -66,7 +65,7 @@ function read_sections(section_dirs; batch_size=1, shuffle=true)
         throttle = cat(throttle, ep_throttle..., dims=1)
         steer = cat(steer, ep_steer..., dims=1)
     end
-    Carla100Data(rgb, speed, command, throttle, steer, batch_size, shuffle)
+    Carla100Data(rgb, speed, command, throttle, steer, batchsize, shuffle)
 end
 
 function read_episode(episode)
@@ -90,12 +89,10 @@ function read_episode(episode)
         speed = j_dict["playerMeasurements"]["forwardSpeed"]
         command = j_dict["directions"]
         throttle = nothing
-        if j_dict["throttle"] == 0.0
+        if j_dict["throttle"] != 0.0
             throttle = j_dict["throttle"]
-        elseif j_dict["brake"] == 0.0
-            throttle = j_dict["brake"] * (-1)
         else
-            @assert false, println("Throttle: ", j_dict["throttle"], " - Speed: ", j_dict["speed"])
+            throttle = j_dict["brake"] * (-1)
         end
         steer = j_dict["steer"]
 

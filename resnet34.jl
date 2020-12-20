@@ -29,7 +29,7 @@ struct SequentialModule
     layers
 end
 SequentialModule(layers...) = SequentialModule(layers)
-(n::SequentialModule)(x) = (for l in n.layers;x = l(x); end; x;)
+(n::SequentialModule)(x) = (for l in n.layers;;x = l(x); end; x;)
 
 struct DenseLayer
     w
@@ -41,7 +41,12 @@ function DenseLayer(in_size::Int, out_size::Int; fn::Function=identity)
     b = param(out_size, 1, init=zeros)
     DenseLayer(w, b, fn)
 end
-(l::DenseLayer)(x) = l.fn.(l.w*x .+ l.b)
+function (l::DenseLayer)(x) 
+    out = l.w*x
+    out = out .+ l.b
+    out = l.fn.(out)
+    return out
+end
     
 struct ConvLayer
     w
@@ -174,7 +179,7 @@ function _load_ResNet_weights!(resnet::SequentialModule, torch_model)
     _load_layer_weights!(resnet.layers[8], torch_model.layer4)
 end
 
-function ResNet34(pretrained::Bool=true, pretrained_path::String="resnet/resnet_34_model")
+function ResNet34(;pretrained::Bool=true, pretrained_path::String="resnet/resnet_34_model")
     model = ResNet([3, 4, 6, 3], 512)
     if pretrained
         pretrained_model = torch.load(pretrained_path)
