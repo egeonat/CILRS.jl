@@ -1,3 +1,4 @@
+using ImageView
 include("resnet34.jl")
 include("loss.jl")
 
@@ -8,8 +9,8 @@ struct CILRSModel
     speed_pred
     action
 end
-function CILRSModel(;dropout_ratio=0.5)
-    perception = ResNet34(true)
+function CILRSModel(;dropout_ratio=0.0)
+    perception = ResNet34(pretrained=false)
     measurements = SequentialModule([
         DenseLayer(1, 128, fn=relu),
         DenseLayer(128, 128, fn=relu)
@@ -24,7 +25,7 @@ function CILRSModel(;dropout_ratio=0.5)
     ])
     action = SequentialModule([
         DenseLayer(512, 512, fn=relu),
-        DenseLayer(512, 2, fn=identity)
+        DenseLayer(512, 2, fn=tanh)
     ])
     CILRSModel(perception, measurements, fused_process, speed_pred, action)
 end
@@ -48,6 +49,11 @@ function (m::CILRSModel)(rgb, speed, command)
 end
 function (m::CILRSModel)(x, y)
     rgb, speed, command = x
+    #println("RGB size: ", size(rgb))
+    #println("RGB mean: ", mean(rgb))
+    #println("Speed size", size(speed))
+    #println("Speed: ", speed)
+    
     throttle, steer = y
     preds = m(rgb, speed, command)
     gt = Dict(

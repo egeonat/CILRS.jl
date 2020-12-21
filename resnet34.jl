@@ -182,6 +182,7 @@ end
 function ResNet34(;pretrained::Bool=true, pretrained_path::String="resnet/resnet_34_model")
     model = ResNet([3, 4, 6, 3], 512)
     if pretrained
+        println("Loading pretrained model from ", pretrained_path)
         pretrained_model = torch.load(pretrained_path)
         _load_ResNet_weights!(model, pretrained_model)
     end
