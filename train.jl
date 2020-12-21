@@ -6,7 +6,7 @@ include("cilrs_model.jl")
 
 
 function train(epochs)
-    model = CILRSModel(dropout_ratio=0.0)
+    model = CILRSModel(dropout_ratio=0.0, pretrained=false)
     for p in params(model)
         p.opt = Adam(lr=0.0002)
     end
