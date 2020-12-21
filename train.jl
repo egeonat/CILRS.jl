@@ -7,23 +7,32 @@ include("cilrs_model.jl")
 
 function train(epochs)
     model = CILRSModel(dropout_ratio=0.0)
-    dataset = read_dataset("/home/onat/carla/cilrs-julia/datasets/tiny_CARLA100/", batchsize=1)
-    optimizer = Adam(lr=0.00002)
+    for p in params(model)
+        p.opt = Adam(lr=0.0002)
+    end
+    dataset = read_dataset("/home/onat/carla/cilrs-julia/datasets/sample_CARLA100/", batchsize=30)
     
-    train_loss = zeros(epochs + 1)
-    train_loss[1] = model(dataset)
-    println("Epoch ", 0, " loss: ", train_loss[1])
-    println("-"^80)
-    for i in 2:epochs+1
-        Knet.minimize!(model, dataset, optimizer)
-        println("-"^80)
-        train_loss[i] = model(dataset)
-        println("Epoch ", i-1, " loss: ", train_loss[i])
-        println("-"^80)
+    train_loss = zeros(epochs)
+    for i in 1:epochs
+        println("Epoch ", i)
+        # This is done without minimize function for easier debugging
+        train_loss[i] = 0.0
+        batch_count = 0
+        for (x, y) in dataset
+            loss = @diff model(x, y)
+            train_loss[i] += value(loss)
+            batch_count += 1
+            for p in params(model)
+                g = grad(loss, p)
+                update!(value(p), g, p.opt)
+            end
+        end
+        train_loss[i] /= batch_count
+        println("Train epoch loss: ", train_loss[i])
     end
     return train_loss
 end
 
-num_epochs = 10
+num_epochs = 20
 train_loss = train(num_epochs)
-plot(0:num_epochs, train_loss)
+plot(1:num_epochs, train_loss[2:end], ylim=(0,2), yticks=0:0.2:2)

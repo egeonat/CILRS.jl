@@ -37,7 +37,7 @@ struct DenseLayer
     fn
 end
 function DenseLayer(in_size::Int, out_size::Int; fn::Function=identity)
-    w = param(out_size, in_size, init=kaiming_normal)
+    w = param(out_size, in_size, init=xavier)
     b = param(out_size, 1, init=zeros)
     DenseLayer(w, b, fn)
 end
@@ -57,7 +57,7 @@ struct ConvLayer
 end
 function ConvLayer(size::Int, in_ch::Int, out_ch::Int; pad::Int, stride::Int,
     fn::Function=identity, bias::Bool=true)
-    w = param(size, size, in_ch, out_ch, init=kaiming_normal)
+    w = param(size, size, in_ch, out_ch, init=xavier)
     b = nothing
     if bias
         b = param(1, 1, out_ch, init=zeros)
@@ -129,9 +129,9 @@ function _make_layer(in_ch::Int, out_ch::Int, blocks::Int; stride::Int=1)
 end
 
 # ResNet implementation support ResNet18 and Resnet34 only
-function ResNet(layers::Array{Int, 1}, out_size::Int)
+function ResNet(layers::Array{Int, 1}, in_ch::Int, out_ch::Int)
     SequentialModule([
-        ConvLayer(7, 3, 64, stride=2, pad=3, bias=false),
+        ConvLayer(7, in_ch, 64, stride=2, pad=3, bias=false),
         BNormLayer2d(64),
         x -> relu.(x),
         PoolLayer(3, stride=2, pad=1),
@@ -141,7 +141,7 @@ function ResNet(layers::Array{Int, 1}, out_size::Int)
         _make_layer(256, 512, layers[4], stride=2),
         x -> global_avg_pool2d(x),
         x -> mat(x),
-        DenseLayer(512, out_size)
+        DenseLayer(512, out_ch)
     ])
 end
 
@@ -170,7 +170,7 @@ function _load_layer_weights!(res_layer::SequentialModule, py_res_layer)
     end
 end
 
-# Loads weights of all layers except for fully connected layers
+# Loads weights of all convolutional layers except for fully connected layers
 function _load_ResNet_weights!(resnet::SequentialModule, torch_model)
     _load_conv_weights!(resnet.layers[1], torch_model.conv1)
     _load_layer_weights!(resnet.layers[5], torch_model.layer1)
@@ -179,8 +179,9 @@ function _load_ResNet_weights!(resnet::SequentialModule, torch_model)
     _load_layer_weights!(resnet.layers[8], torch_model.layer4)
 end
 
-function ResNet34(;pretrained::Bool=true, pretrained_path::String="resnet/resnet_34_model")
-    model = ResNet([3, 4, 6, 3], 512)
+function ResNet34(;in_channels=3, out_channels=512, pretrained::Bool,
+    pretrained_path::String="resnet/resnet_34_model")
+    model = ResNet([3, 4, 6, 3], in_channels, out_channels)
     if pretrained
         println("Loading pretrained model from ", pretrained_path)
         pretrained_model = torch.load(pretrained_path)

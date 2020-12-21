@@ -25,11 +25,13 @@ function iterate(d::Carla100Data, state=ifelse(d.shuffle, randperm(length(d)), c
     if remaining_count < d.batchsize
         return nothing
     end
-    sample = ((KnetArray{Float32, 4}(d.rgb[:,:,:,state[1:d.batchsize]]),
-        KnetArray{Float32}(d.speed[state[1:d.batchsize]]),
-        KnetArray{Int8}(d.command[state[1:d.batchsize]])),
-        (KnetArray{Float32}(d.throttle[state[1:d.batchsize]]),
-        KnetArray{Float32}(d.steer[state[1:d.batchsize]])))
+    x = (Knet.atype()(d.rgb[:,:,:,state[1:d.batchsize]]),
+        Knet.atype()(d.speed[state[1:d.batchsize]]),
+        Knet.atype()(d.command[state[1:d.batchsize]]))
+    y = (Knet.atype()(d.throttle[state[1:d.batchsize]]),
+        Knet.atype()(d.steer[state[1:d.batchsize]]))
+    sample = (x, y)
+        
     state = state[d.batchsize+1:end]
     return (sample, state)
 end
@@ -50,7 +52,7 @@ function read_sections(section_dirs; batchsize=1, shuffle=true)
     throttle = Array{Float32}(undef, 0)
     steer = Array{Float32}(undef, 0)
 
-    for section in section_dirs
+    Threads.@threads for section in section_dirs
         println("Reading section: ", section)
         episodes = readdir(section, join=true)
 

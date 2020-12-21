@@ -1,4 +1,3 @@
-using ImageView
 include("resnet34.jl")
 include("loss.jl")
 
@@ -9,8 +8,8 @@ struct CILRSModel
     speed_pred
     action
 end
-function CILRSModel(;dropout_ratio=0.0)
-    perception = ResNet34(pretrained=false)
+function CILRSModel(;pretrained, dropout_ratio=0.0)
+    perception = ResNet34(pretrained=pretrained)
     measurements = SequentialModule([
         DenseLayer(1, 128, fn=relu),
         DenseLayer(128, 128, fn=relu)
