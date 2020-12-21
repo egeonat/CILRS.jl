@@ -35,4 +35,4 @@ end
 
 num_epochs = 20
 train_loss = train(num_epochs)
-plot(1:num_epochs, train_loss[2:end], ylim=(0,2), yticks=0:0.2:2)
+plot(1:num_epochs, train_loss[1:end], ylim=(0,2), yticks=0:0.2:2)
