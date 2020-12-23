@@ -185,7 +185,7 @@ function _load_ResNet_weights!(resnet::SequentialModule, torch_model)
 end
 
 function ResNet34(;in_channels=3, out_channels=512, pretrained::Bool,
-    pretrained_path::String="resnet/resnet_34_model")
+    pretrained_path::String="pretrained_resnet/resnet_34_model")
     model = ResNet([3, 4, 6, 3], in_channels, out_channels)
     if pretrained
         println("Loading pretrained model from ", pretrained_path)
