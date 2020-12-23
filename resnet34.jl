@@ -90,7 +90,12 @@ struct BNormLayer2d
     bparams
 end
 BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), Knet.atype(bnparams(channels)))
-(bn::BNormLayer2d)(x) = batchnorm(x, bn.bmoments, bn.bparams)
+function (bn::BNormLayer2d)(x)
+	#println("Bnorm input: ", summary(x))
+	#println(summary(bn.bmoments))
+	#println(summary(bn.bparams))
+	batchnorm(x, bn.bmoments, bn.bparams)
+end
 
 struct BasicBlock
     sequential_module

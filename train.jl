@@ -10,7 +10,7 @@ function train(epochs)
     for p in params(model)
         p.opt = Adam(lr=0.0002)
     end
-    dataset = read_dataset("/home/onat/carla/cilrs-julia/datasets/sample_CARLA100/", batchsize=30)
+    dataset = read_dataset("/datasets/CARLA100", batchsize=120)
     
     train_loss = zeros(epochs)
     for i in 1:epochs
