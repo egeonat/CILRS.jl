@@ -2,3 +2,8 @@
 __pycache__/
 resnet/
 datasets/
+out/
+preloaded_datasets/
+jobs/
+pretrained_resnet/
+*_job.sh
