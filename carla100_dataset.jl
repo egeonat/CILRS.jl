@@ -6,9 +6,9 @@ using Images
 using Knet
 using JLD
 
-# TODO recompute these with larger sample
-RGB_MEAN = [0.28462812, 0.3055363, 0.32060984]
-RGB_STD_DEV = [0.2486219, 0.24289215, 0.23690315]
+# These were calculated over 100 episodes of the CARLA100 dataset
+RGB_MEAN = [0.2737216297343605, 0.2710062535804844, 0.26433370501927095]
+RGB_STD_DEV = [0.1889955028405721, 0.1874645355614174, 0.1907332337495055]
 
 struct Carla100Data
     rgb::Array{Float32, 4}
@@ -105,9 +105,15 @@ function read_episode(episode)
 	flush(stdout)
 	num_samples = min(length(rgb_files ), length(json_files ))
     for i in 0:num_samples-1
+		# Creating file paths and checking if they exist
 		id_str = string(lpad(i, 5, "0"))
+		json_path = joinpath(episode, string("measurements_", id_str, ".json"))
+		rgb_path = joinpath(episode, string("CentralRGB_", id_str, ".png"))
+		if !isfile(json_path) || !isfile(rgb_path)
+			continue
+		end
         # Load json measurements
-        j_dict = JSON.parsefile(joinpath(episode, string("measurements_", id_str, ".json")))
+        j_dict = JSON.parsefile(json_path)
 		# Skip if keys are missing
 		if !haskey(j_dict, "playerMeasurements") ||
 			!haskey(j_dict["playerMeasurements"], "forwardSpeed") ||
@@ -121,7 +127,7 @@ function read_episode(episode)
 			continue
 		end
         # Load and reshape rgb
-        rgb = float32.(load(joinpath(episode, string("CentralRGB_", id_str, ".png"))))
+        rgb = float32.(load(rgb_path))
         rgb = PermutedDimsArray(channelview(rgb), (2, 3, 1))
 		rgb = reshape(rgb, size(rgb)..., 1)
         # Normalize
@@ -151,6 +157,3 @@ end
 function read_preloaded_dataset(path)
 	load(path)["dataset"]
 end
-
-dataset = read_sections(["/datasets/CARLA100/CVPR2019-CARLA100_02"]; batchsize=120, episode_lim=100)
-save("/kuacc/users/eozsuer16/dl/CILRS.jl/preloaded_datasets/CARLA_100_ep300-400.jld_bs120.jld", "dataset", dataset)

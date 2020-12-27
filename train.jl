@@ -10,12 +10,11 @@ function train(epochs)
     for p in params(model)
         p.opt = Adam(lr=0.0002)
     end
-    dataset = read_dataset("/datasets/CARLA100", batchsize=120)
+	dataset = read_preloaded_dataset("./preloaded_datasets/mini_dataset.jld")
     
     train_loss = zeros(epochs)
     for i in 1:epochs
         println("Epoch ", i)
-        # This is done without minimize function for easier debugging
         train_loss[i] = 0.0
         batch_count = 0
         for (x, y) in dataset
@@ -29,10 +28,11 @@ function train(epochs)
         end
         train_loss[i] /= batch_count
         println("Train epoch loss: ", train_loss[i])
+		flush(stdout)
     end
     return train_loss
 end
 
-num_epochs = 20
+num_epochs = 100
 train_loss = train(num_epochs)
-plot(1:num_epochs, train_loss[1:end], ylim=(0,2), yticks=0:0.2:2)
+#plot(1:num_epochs, train_loss[1:end], ylim=(0,2), yticks=0:0.2:2)
