@@ -1,38 +1,75 @@
-using Plots
 using AutoGrad
 using Knet
+using JLD2
 include("carla100_dataset.jl")
 include("cilrs_model.jl")
 
 
-function train(epochs)
-    model = CILRSModel(dropout_ratio=0.0, pretrained=false)
+function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
+	# Set up model
+    model = CILRSModel(dropout_ratio=dropout_ratio, pretrained=true)
     for p in params(model)
-        p.opt = Adam(lr=0.0002)
+        p.opt = Adam(lr=learning_rate)
     end
-	dataset = read_preloaded_dataset("./preloaded_datasets/mini_dataset.jld")
+	
+	# Set up train and val data
+	@load "./preloaded_datasets/mini_dataset.jld2" dataset
+	train_set = dataset
+	println("Train set of ", length(train_set), " samples and batchsize: ", train_set.batchsize)
+	@load "./preloaded_datasets/mini_dataset.jld2" dataset
+	val_set = dataset
+	println("Val set of ", length(val_set), " samples and batchsize: ", val_set.batchsize)
     
+	# Arrays to record loss values
     train_loss = zeros(epochs)
+    val_loss = zeros(div(epochs, val_interval))
+
+	# Training loop
     for i in 1:epochs
         println("Epoch ", i)
-        train_loss[i] = 0.0
         batch_count = 0
-        for (x, y) in dataset
-            loss = @diff model(x, y)
-            train_loss[i] += value(loss)
+
+		# Train
+        for (x, y) in train_set
+            iter_loss = @diff model(x, y)
+            train_loss[i] += value(iter_loss)
             batch_count += 1
             for p in params(model)
-                g = grad(loss, p)
-                update!(value(p), g, p.opt)
+                g = grad(iter_loss, p)
+				if !isnothing(g)
+					update!(value(p), g, p.opt)
+				end
             end
         end
         train_loss[i] /= batch_count
         println("Train epoch loss: ", train_loss[i])
+
+		# Val
+		if i % val_interval == 0
+			batch_count = 0
+			for (x, y) in val_set
+				iter_loss = model(x, y)
+				val_loss[div(i, val_interval)] += value(iter_loss)
+				batch_count += 1
+			end
+			val_loss[div(i, val_interval)] /= batch_count
+			println("Val epoch loss: ", val_loss[div(i, val_interval)])
+		end
+
+		if i % 20 == 0
+			for p in params(model)
+				p.opt.lr *= 0.5 
+			end
+		end
 		flush(stdout)
     end
-    return train_loss
+	println("Saving model")
+	model_path = "models/" * string(epochs) * "epochs_" * string(dropout_ratio) * "dropout.jld2"
+	@save model_path model
+    return train_loss, val_loss
 end
 
 num_epochs = 100
-train_loss = train(num_epochs)
-#plot(1:num_epochs, train_loss[1:end], ylim=(0,2), yticks=0:0.2:2)
+dropout_ratio = 0.5
+val_interval = 4
+train_loss = train(num_epochs, val_interval, dropout_ratio=dropout_ratio)

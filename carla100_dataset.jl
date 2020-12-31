@@ -4,7 +4,6 @@ using JSON
 using ImageIO
 using Images
 using Knet
-using JLD
 
 # These were calculated over 100 episodes of the CARLA100 dataset
 RGB_MEAN = [0.2737216297343605, 0.2710062535804844, 0.26433370501927095]
@@ -26,9 +25,11 @@ function iterate(d::Carla100Data, state=ifelse(d.shuffle, randperm(length(d)), c
     if remaining_count < d.batchsize
         return nothing
     end
+	commands = d.command[state[1:d.batchsize]] .- 1
+	commands[commands .== -1] .= 1
     x = (Knet.atype()(d.rgb[:,:,:,state[1:d.batchsize]]),
         Knet.atype()(d.speed[state[1:d.batchsize]]),
-        Knet.atype()(d.command[state[1:d.batchsize]]))
+        Knet.atype()(commands))
     y = (Knet.atype()(d.throttle[state[1:d.batchsize]]),
         Knet.atype()(d.steer[state[1:d.batchsize]]))
     sample = (x, y)
@@ -152,8 +153,4 @@ function read_episode(episode)
     end
 	println("Finished reading ", episode)
     ep_rgb, ep_speed, ep_command, ep_throttle, ep_steer
-end
-
-function read_preloaded_dataset(path)
-	load(path)["dataset"]
 end

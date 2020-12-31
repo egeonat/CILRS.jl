@@ -1,6 +1,23 @@
 include("resnet34.jl")
 include("loss.jl")
 
+struct BranchedModule
+	branches
+end
+function (m::BranchedModule)(x, commands)
+	all_outputs = []
+	for (i, b) in enumerate(m.branches)
+		push!(all_outputs, b(x))
+	end
+	println(summary(all_outputs))
+	println(summary(all_outputs[1]))
+	out_list = Knet.atype()(zeros, 2, length(commands))
+	for i in 1:size(x)[end]
+		println(all_outputs[Int(commands[i])][:,i])
+		out_list[:,i] = all_outputs[Int(commands[i])][:,i]
+	end
+end
+		
 struct CILRSModel
     perception
     measurements
@@ -8,6 +25,7 @@ struct CILRSModel
     speed_pred
     action
 end
+
 function CILRSModel(;pretrained, dropout_ratio=0.0)
     perception = ResNet34(pretrained=pretrained)
     measurements = SequentialModule([
@@ -22,36 +40,38 @@ function CILRSModel(;pretrained, dropout_ratio=0.0)
         x -> relu.(x),
         DenseLayer(256, 1)
     ])
-    action = SequentialModule([
-        DenseLayer(512, 512, fn=relu),
-        DenseLayer(512, 2, fn=tanh)
-    ])
+    branches = Array{SequentialModule}(undef, 0)
+	for i in 1:4
+		branch = SequentialModule([
+			DenseLayer(512, 512, fn=relu),
+			DenseLayer(512, 2, fn=identity)
+			])
+		push!(branches, branch)
+	end
+	action = BranchedModule(branches)
     CILRSModel(perception, measurements, fused_process, speed_pred, action)
 end
 
 function (m::CILRSModel)(rgb, speed, command)
     rgb_fts = m.perception(rgb)
-    #println("rgb_fts: ", mean(rgb_fts))
-    #println("rgb_fts shape: ", size(rgb_fts))
+	#rgb_fts = Knet.atype()(ones(512, 120))
+
     spd_fts = m.measurements(reshape(speed, (1, size(speed)...)))
-    #println("spd_fts: ", mean(spd_fts))
-    #println("spd_fts shape: ", size(spd_fts))
+	#spd_fts = Knet.atype()(ones(128))
+
     spd_prd = m.speed_pred(rgb_fts)
     fused_fts = m.fused_process(vcat(rgb_fts, spd_fts))
-    #println("fused_fts: ", mean(fused_fts))
-    action_prd = m.action(fused_fts)
+
+    action_prd = m.action(fused_fts, command)
     preds = Dict(
         "throttle"=>action_prd[1,:],
         "steer"=>action_prd[2,:],
         "speed"=>spd_prd
     )
 end
+
 function (m::CILRSModel)(x, y)
     rgb, speed, command = x
-    #println("RGB size: ", size(rgb))
-    #println("RGB mean: ", mean(rgb))
-    #println("Speed size", size(speed))
-    #println("Speed: ", speed)
     
     throttle, steer = y
     preds = m(rgb, speed, command)
