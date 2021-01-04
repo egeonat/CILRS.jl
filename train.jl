@@ -4,7 +4,6 @@ using JLD2
 include("carla100_dataset.jl")
 include("cilrs_model.jl")
 
-
 function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
 	# Set up model
     model = CILRSModel(dropout_ratio=dropout_ratio, pretrained=true)
@@ -13,16 +12,17 @@ function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
     end
 	
 	# Set up train and val data
-	@load "./preloaded_datasets/mini_dataset.jld2" dataset
+	@load "./preloaded_datasets/train.jld2" dataset
 	train_set = dataset
 	println("Train set of ", length(train_set), " samples and batchsize: ", train_set.batchsize)
-	@load "./preloaded_datasets/mini_dataset.jld2" dataset
+	@load "./preloaded_datasets/val.jld2" dataset
 	val_set = dataset
 	println("Val set of ", length(val_set), " samples and batchsize: ", val_set.batchsize)
     
 	# Arrays to record loss values
     train_loss = zeros(epochs)
     val_loss = zeros(div(epochs, val_interval))
+
 
 	# Training loop
     for i in 1:epochs
@@ -33,6 +33,7 @@ function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
         for (x, y) in train_set
             iter_loss = @diff model(x, y)
             train_loss[i] += value(iter_loss)
+			
             batch_count += 1
             for p in params(model)
                 g = grad(iter_loss, p)
@@ -54,6 +55,13 @@ function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
 			end
 			val_loss[div(i, val_interval)] /= batch_count
 			println("Val epoch loss: ", val_loss[div(i, val_interval)])
+			println(val_loss[div(i, val_interval)], " - ",  minimum(val_loss[1:div(i, val_interval)]))
+			if val_loss[div(i, val_interval)] <= minimum(val_loss[1:div(i, val_interval)])
+				model_path = "models/" * string(i) * "_epochs_" * string(dropout_ratio) *
+					"dropout.jld2"
+				println("Saving model: ", model_path, model_path)
+				@save model_path model
+			end
 		end
 
 		if i % 20 == 0
@@ -63,13 +71,10 @@ function train(epochs, val_interval; dropout_ratio=0.5, learning_rate=0.0002)
 		end
 		flush(stdout)
     end
-	println("Saving model")
-	model_path = "models/" * string(epochs) * "epochs_" * string(dropout_ratio) * "dropout.jld2"
-	@save model_path model
     return train_loss, val_loss
 end
 
-num_epochs = 100
+num_epochs = 200
 dropout_ratio = 0.5
-val_interval = 4
-train_loss = train(num_epochs, val_interval, dropout_ratio=dropout_ratio)
+val_interval = 5
+train(num_epochs, val_interval, dropout_ratio=dropout_ratio, learning_rate=0.0002)

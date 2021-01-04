@@ -9,13 +9,13 @@ function (m::BranchedModule)(x, commands)
 	for (i, b) in enumerate(m.branches)
 		push!(all_outputs, b(x))
 	end
-	println(summary(all_outputs))
-	println(summary(all_outputs[1]))
-	out_list = Knet.atype()(zeros, 2, length(commands))
-	for i in 1:size(x)[end]
-		println(all_outputs[Int(commands[i])][:,i])
-		out_list[:,i] = all_outputs[Int(commands[i])][:,i]
+	out_list = all_outputs[Int(commands[1])][:,1]
+	for i in 2:size(x)[end]
+		index = Int(commands[i])
+		out = all_outputs[index][:,i]
+		out_list = hcat(out_list, out)
 	end
+	out_list
 end
 		
 struct CILRSModel

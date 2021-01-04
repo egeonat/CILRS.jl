@@ -1,9 +1,16 @@
 using Statistics
 
 function loss(preds, gt)
+	#println(summary(preds["throttle"]))
+	#println(summary(gt["throttle"]))
+	#println(summary(preds["steer"]))
+	#println(summary(gt["steer"]))
+	#println(summary(preds["speed"]))
+	#println(summary(gt["speed"]))
+
+    speed_error = mean(abs.(preds["speed"] .- gt["speed"]))
     throttle_error = mean(abs.(preds["throttle"] .- gt["throttle"]))
     steer_error = mean(abs.(preds["steer"] .- gt["steer"]))
-    speed_error = mean(abs.(preds["speed"] .- gt["speed"]))
 
     #println("throttle preds: ", preds["throttle"][1])
     #println("throttle gt: ", gt["throttle"][1])
