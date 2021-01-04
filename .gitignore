@@ -6,4 +6,5 @@ out/
 preloaded_datasets/
 jobs/
 pretrained_resnet/
+models/
 *_job.sh
