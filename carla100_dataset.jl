@@ -135,7 +135,7 @@ function read_episode(episode)
         #rgb = (rgb .- reshape(RGB_MEAN, (1, 1, 3, 1))) 
         #rgb = rgb ./ reshape(RGB_STD_DEV, (1, 1, 3, 1))
         # Extract relevant measurements
-        speed = j_dict["playerMeasurements"]["forwardSpeed"]
+        speed = j_dict["playerMeasurements"]["forwardSpeed"] / 12
         command = j_dict["directions"]
         throttle = nothing
         if j_dict["throttle"] != 0.0
