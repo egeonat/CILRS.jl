@@ -3,25 +3,25 @@ include("loss.jl")
 include("utils.jl")
 
 struct BranchedModule
-	branches
+    branches
 end
 function (m::BranchedModule)(x, commands)
-	all_outputs = []
-	for (i, b) in enumerate(m.branches)
-		push!(all_outputs, b(x))
-	end
-	#println(all_outputs)
-	#println(commands)
-	out_list = all_outputs[Int(commands[1])][:,1]
-	for i in 2:size(x)[end]
-		index = Int(commands[i])
-		out = all_outputs[index][:,i]
-		out_list = hcat(out_list, out)
-	end
-	#println(out_list)
-	out_list
+    all_outputs = []
+    for (i, b) in enumerate(m.branches)
+        push!(all_outputs, b(x))
+    end
+    #println(all_outputs)
+    #println(commands)
+    out_list = all_outputs[Int(commands[1])][:,1]
+    for i in 2:size(x)[end]
+        index = Int(commands[i])
+        out = all_outputs[index][:,i]
+        out_list = hcat(out_list, out)
+    end
+    #println(out_list)
+    out_list
 end
-		
+        
 struct CILRSModel
     perception
     measurements
@@ -45,26 +45,26 @@ function CILRSModel(;pretrained, dropout_ratio=0.0)
         DenseLayer(256, 1)
     ])
     branches = Array{SequentialModule}(undef, 0)
-	for i in 1:4
-		branch = SequentialModule([
-			DenseLayer(512, 512, fn=relu),
-			DenseLayer(512, 2, fn=identity)
-			])
-		push!(branches, branch)
-	end
-	action = BranchedModule(branches)
+    for i in 1:4
+        branch = SequentialModule([
+            DenseLayer(512, 512, fn=relu),
+            DenseLayer(512, 2, fn=identity)
+            ])
+        push!(branches, branch)
+    end
+    action = BranchedModule(branches)
     CILRSModel(perception, measurements, fused_process, speed_pred, action)
 end
 
 function (m::CILRSModel)(rgb, speed, command)
-	# Visualize first rgb image
-	#visualize_rgb(rgb)
+    # Visualize first rgb image
+    #visualize_rgb(rgb)
 
     rgb_fts = m.perception(rgb)
-	#rgb_fts = Knet.atype()(ones(512, 120))
+    #rgb_fts = Knet.atype()(ones(512, 120))
 
     spd_fts = m.measurements(reshape(speed, (1, size(speed)...)))
-	#spd_fts = Knet.atype()(ones(128))
+    #spd_fts = Knet.atype()(ones(128))
 
     spd_prd = m.speed_pred(rgb_fts)
     fused_fts = m.fused_process(vcat(rgb_fts, spd_fts))

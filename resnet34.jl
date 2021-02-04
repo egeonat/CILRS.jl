@@ -92,10 +92,10 @@ struct BNormLayer2d
 end
 BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), Param(Knet.atype(bnparams(channels))))
 function (bn::BNormLayer2d)(x)
-	#println("Bnorm input: ", summary(x))
-	#println(summary(bn.bmoments))
-	#println(summary(bn.bparams))
-	batchnorm(x, bn.bmoments, bn.bparams)
+    #println("Bnorm input: ", summary(x))
+    #println(summary(bn.bmoments))
+    #println(summary(bn.bparams))
+    batchnorm(x, bn.bmoments, bn.bparams)
 end
 
 struct BasicBlock
