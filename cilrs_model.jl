@@ -1,5 +1,6 @@
 include("resnet34.jl")
 include("loss.jl")
+include("utils.jl")
 
 struct BranchedModule
 	branches
@@ -9,12 +10,15 @@ function (m::BranchedModule)(x, commands)
 	for (i, b) in enumerate(m.branches)
 		push!(all_outputs, b(x))
 	end
+	#println(all_outputs)
+	#println(commands)
 	out_list = all_outputs[Int(commands[1])][:,1]
 	for i in 2:size(x)[end]
 		index = Int(commands[i])
 		out = all_outputs[index][:,i]
 		out_list = hcat(out_list, out)
 	end
+	#println(out_list)
 	out_list
 end
 		
@@ -53,6 +57,9 @@ function CILRSModel(;pretrained, dropout_ratio=0.0)
 end
 
 function (m::CILRSModel)(rgb, speed, command)
+	# Visualize first rgb image
+	#visualize_rgb(rgb)
+
     rgb_fts = m.perception(rgb)
 	#rgb_fts = Knet.atype()(ones(512, 120))
 

@@ -3,6 +3,7 @@ using PyCall
 @pyimport torch
 @pyimport numpy
 
+# This is currently not used
 function kaiming_normal(a...; mode="fan_out", gain=sqrt(2))
     w = randn(a...)
     if ndims(w) == 1
@@ -65,7 +66,7 @@ function ConvLayer(size::Int, in_ch::Int, out_ch::Int; pad::Int, stride::Int,
     ConvLayer(w, b, pad, stride, fn)
 end
 function (c::ConvLayer)(x) 
-    out = conv4(c.w, x, padding=c.pad, stride=c.stride)
+    out = conv4(c.w, x, padding=c.pad, stride=c.stride, mode=1)
     if !isnothing(c.b)
         out = out .+ c.b
     end
@@ -89,7 +90,7 @@ struct BNormLayer2d
     bmoments
     bparams
 end
-BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), Knet.atype(bnparams(channels)))
+BNormLayer2d(channels::Int) = BNormLayer2d(bnmoments(), Param(Knet.atype(bnparams(channels))))
 function (bn::BNormLayer2d)(x)
 	#println("Bnorm input: ", summary(x))
 	#println(summary(bn.bmoments))
